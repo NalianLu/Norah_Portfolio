@@ -6,7 +6,7 @@ Track my progress in data analytics
 * Apply supervised learning models (logic regression, random forest) to predict bank churners
 * Analyze key factors affecting churn, and make better business decisions for improving user retention
 
-## Project 2: Breast Cancer Statistical Learning
-* Frequency statistics based on histogram
-* Outlier analysis based on quartile method
-* Correlation analysis
+## Project 2: Finding Undervalued American Options for Netflix
+* Perform statistical analysis on Netflix stock prices
+* Employ Monte Carlo simulation and improved simulation efficiency by 12.5 times using stratified sampling
+* Identify more than 50 underpriced American options for Netflix
