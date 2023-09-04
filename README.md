@@ -10,3 +10,8 @@ Track my progress in data analytics
 * Perform statistical analysis on Netflix stock prices
 * Employ Monte Carlo simulation and improved simulation efficiency by 12.5 times using stratified sampling
 * Identify more than 50 underpriced American options for Netflix
+
+## Project 3: Subscriber Prediction for a Streaming Platform
+* Create a cost-sensitive performance metric
+* Build predictive models with feature selection and feature engineering
+* Identify prospective subscribers in the upcoming 3 months and optimize marketing strategies
