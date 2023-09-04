@@ -13,5 +13,5 @@ Track my progress in data analytics
 
 ## Project 3: Subscriber Prediction for a Streaming Platform
 * Design a cost-sensitive performance metric
-* Build predictive models with feature selection and feature engineering
+* Build 6 different predictive models with feature selection and feature engineering
 * Identify prospective subscribers in the upcoming 3 months and optimize marketing strategies
