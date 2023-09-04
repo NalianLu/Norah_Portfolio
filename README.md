@@ -12,6 +12,6 @@ Track my progress in data analytics
 * Identify more than 50 underpriced American options for Netflix
 
 ## Project 3: Subscriber Prediction for a Streaming Platform
-* Create a cost-sensitive performance metric
+* Design a cost-sensitive performance metric
 * Build predictive models with feature selection and feature engineering
 * Identify prospective subscribers in the upcoming 3 months and optimize marketing strategies
