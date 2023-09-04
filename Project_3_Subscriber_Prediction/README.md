@@ -1,1 +1,3 @@
-Applied R to create cost-sensitive predictive models to identify prospective subscribers in upcoming 3 months for a streaming platform and optimize marketing strategies
+Developed 6 classification machine learning models using R to identify the most probable subscriber and optimize marketing strategies
+* Defined a cost-sensitive performance metric;
+* Improved model performance 1.5x for imbalanced data by oversampling and feature selection
