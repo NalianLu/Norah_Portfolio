@@ -15,3 +15,7 @@ Track my progress in data analytics
 * Design a cost-sensitive performance metric
 * Build 6 different predictive models with feature selection and feature engineering
 * Identify prospective subscribers in the upcoming 3 months and optimize marketing strategies
+
+## Project 4: Sentiment Analysis on Yelp Reviews
+* Compare the performance of 4 different word embedding techniques (Default Keras Embedding, word2vec, fastText, and GloVe)
+* Build the LSTM(Long Short Term Memory) neural network deep learning model to conduct sentiment analysis on Yelp reviews
