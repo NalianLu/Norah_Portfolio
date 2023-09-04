@@ -1,0 +1,243 @@
+---
+title: "Homework 2 Technical Document"
+author: "Group 6"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(caret)  # train-val-test split
+library(rpart)  # decision tree
+library(rpart.plot) # decision tree
+library(class) # K-NN
+#install.packages("ROSE")
+library(ROSE)  # over-sampling
+library(e1071) # Naive Bayes
+data <- read_csv("XYZData.csv")
+data$adopter = as.factor(data$adopter)
+```
+
+# Table of contents:
+1. Problem Scoping
+2. Exploratory Data Analysis
+3. Predictive Analysis
+4. Summary for Analysis Results
+
+# 1. Problem Scoping
+## 1.1 Background Information
+Website XYZ, a music-listening social networking website, follows the "freemium" business model. The website offers basic services for free, and provides a number of additional premium capabilities for a monthly subscription fee.
+
+## 1.2 Problem Statement
+Know which users would be likely to convert from free users to premium subscribers in the next 6 month period, if they are targeted by the promotional campaign.
+
+## 1.2 Objective
+Build the best predictive model to predict likely adopters for the next marketing campaign
+
+## 1.3 Data Requirement
+The user features and results of previous marketing campaigns which targeted a number of non-subscribers
+
+## 1.4 Deliverables
+1. A proper performance metric for model evaluation based on the description of the business
+2. Sampling techniques to process imbalanced class distribution data
+3. The best model that achieves highest performance on the metric of selection after comparing different modeling techniques, different parameter configurations, and feature selection strategies.
+
+# 2. Exploratory Data Analysis
+## 2.1 Get a summary of dataset
+```{r}
+summary(data |> select(-user_id))
+```
+Most of features are positively skewed except for male, avg_friend_male, delta_avg_friend_male, delta_subscriber_friend_cnt, and tenure.
+
+## 2.2 Missing value check
+```{r}
+sum(is.na(data))
+```
+There is no row with missing values in the dataset.
+
+## 2.3 Visualize the adopter
+```{r}
+# pie chart for adopter to see the proportion
+ggplot(data, aes(x = adopter, fill = adopter)) +
+  geom_bar()
+```
+```{r}
+num_class1 <- data |> filter(adopter==1) |> count()
+as.numeric(100*num_class1/count(data))  # in percentage
+```
+The class distribution is highly imbalanced with only 3.7% are adopters (class 1).
+
+## 2.4 Explore relationships between variables
+```{r}
+# Create a correlation matrix
+cor_matrix <- round(cor(data[,2:26]),2)
+# Find the top 5 correlated column pairs
+top_cor <- findCorrelation(cor_matrix, cutoff = 0.5, names = TRUE)
+# Print the top correlated column pairs
+print(top_cor)
+```
+These features have strong correlation (correlation coefficient >= 0.5):
+
+1. age-related
+  + cor(age, avg_friend_age) = 0.69
+2. friend-related
+  + cor(friend_cnt, friend_country_cnt) = 0.69
+  + cor(friend_cnt, subscriber_friend_cnt) = 0.65
+  + cor(delta_friend_cnt, delta_friend_country_cnt) = 0.65
+  + cor(friend_country_cnt, subscriber_friend_cnt) = 0.57
+3. track-related
+  + cor(lovedTracks, delta_lovedTracks) = 0.51
+
+
+# 3. Predictive Analysis
+## 3.1 Performance metric
+When dealing with highly imbalanced data, accuracy alone may not be a suitable performance metric, as it can be misleading. We considered following classification performance metrics to deal with it.
+
+* *$Precision_{Pos}$*: Precision is particularly important when the positive class is the class of interest (in this case, users becoming subscribers). It measures the proportion of correctly predicted subscribers out of all predicted subscribers. Maximizing precision helps minimize false positives, ensuring that the users predicted as subscribers are more likely to convert into actual subscribers.
+* *$Recall_{Pos}$*: Recall becomes crucial when it is important to capture as many true positives (subscribers) as possible. Maximizing recall helps ensure that a higher proportion of actual subscribers are correctly identified by the model.
+* *$FMeasure_{Pos}$*: The F1 score is a harmonic mean of precision and recall, providing a balanced measure of the model's performance. It takes into account both precision and recall, making it useful when you want to strike a balance between identifying subscribers accurately (precision) and capturing a good proportion of actual subscribers (recall).
+
+Assuming that promotional campaign is costly, minimizing false positives (predicting non-subscribers as subscribers) is important. Thus, we decide to prioritize $Precision_{Pos}$ metric and make a combination of $Precision_{Pos}$ and $FMeasure_{Pos}$ metrics with different weights to have a comprehensive evaluation of the model's performance. Here is the performance metric we use:
+
+$$
+Performance Metric = 0.7*Precision_{Pos} + 0.3*FMeasure_{Pos}
+$$
+
+## 3.2 Oversampling on training data
+We use ROSE (Random Over-Sampling Examples) package for oversampling.
+
+```{r}
+# split the dataset into 50% training, 30% validation, and 20% testing
+set.seed(123)  # set the seed for reproducibility
+train_rows <- createDataPartition(y = data$adopter, p = 0.5, list = FALSE)
+data_train <- data[train_rows,] |> select(-user_id)  # 50% for training
+data_remain <- data[-train_rows,] |> select(-user_id)
+validation_rows <- createDataPartition(y = data_remain$adopter, p = 0.6, list = FALSE)
+data_validation <- data_remain[validation_rows,]  # 30% for validation
+data_test <- data_remain[-validation_rows,]  # 20% for testing
+```
+Remove user_id column because it is not a feature.
+
+```{r}
+# oversampling on training data
+oversampled_data <- ovun.sample(adopter ~ ., data = data_train, method = "over", p = 0.3, seed = 123)
+balanced_data_train = oversampled_data$data
+```
+The `ovun.sample()` function takes the formula adopter ~ ., where adopter is our target variable, and . represents all other predictor variables. The method parameter is set to "over" to perform oversampling. The P parameter is set to the probability of resampling from the rare class is 30%. The seed parameter is used for reproducibility.
+
+```{r}
+num_class1 <- balanced_data_train |> filter(adopter==1) |> count()
+as.numeric(100*num_class1/count(balanced_data_train))  # in percentage
+```
+The adopters in the training data account for roughly 30% now. We will build our prediction models based on balanced training data.
+
+## 3.3 K-NN prediction model
+We will use normalized data to calculate distance and train K-NN prediction models.
+```{r}
+# normalize
+normalize = function(x){
+  return ((x - min(x))/(max(x) - min(x)))
+  }
+balanced_data_train_norm = balanced_data_train |> mutate_at(1:25, normalize)
+data_validation_norm = data_validation |> mutate_at(1:25, normalize)
+```
+
+We try k values from 2 to 10 and evaluate its performance respectively.
+```{r}
+# train a K-NN model for a few k values
+for (kval in 2:10) {
+  pred_knn = knn(train = balanced_data_train_norm[,1:25],
+                 test = data_validation_norm[,1:25],
+                 cl = balanced_data_train_norm[,26],
+                 k = kval)
+  conf_matrix = confusionMatrix(data = pred_knn, 
+                                reference = data_validation_norm$adopter,
+                                mode = "prec_recall",
+                                positive = '1')
+  precision_knn <- conf_matrix$byClass["Pos Pred Value"]
+  f1_knn <- conf_matrix$byClass["F1"]
+  performance_knn <- setNames(0.7*precision_knn+0.3*f1_knn,'performance_knn')
+  cat(sprintf("Performance with k = %d is: %f \n", kval, performance_knn))
+}
+```
+The model performance best when k = 7.
+
+## 3.4 Decision Tree prediction model
+We use rpart package to build the Decision Tree.
+```{r}
+# train a decision tree model
+tree = rpart(adopter ~ ., data = balanced_data_train,
+             method = "class",
+             parms = list(split = "information"))
+```
+The `rpart()` function does recursive partition. It takes the formula adopter ~ ., where adopter is our target variable, and . represents all other predictor variables. The method parameter is set to "class" to specify that the task is classification. The parms parameter allows us to specify other parameters, such as splitting criterion. Here we set split = "information" meaning that we want to determine splits based on information gain.
+
+```{r}
+# visualize the decision tree
+prp(tree, varlen = 0)
+```
+
+
+```{r}
+# make prediction
+pred_tree = predict(tree, data_validation, type = "class")
+# get the performance
+conf_matrix = confusionMatrix(data = pred_tree,
+                              reference = data_validation$adopter,
+                              mode = "prec_recall",
+                              positive = '1')
+
+# evaluate performance
+precision_dt <- conf_matrix$byClass["Pos Pred Value"]
+f1_dt <- conf_matrix$byClass["F1"]
+performance_dt <- setNames(0.7*precision_dt+0.3*f1_dt,'performance_dt')
+print(c(performance_dt, precision_dt, f1_dt))
+```
+
+# Tree pruning
+tree = rpart(adopter ~ ., data = balanced_data_train,
+method = "class",
+parms = list(split = "information"),
+control = list(minsplit = 10, maxdepth = 4))
+prp(tree, varlen = 0)
+
+## 3.5 Naive Bayes prediction model
+We use the naiveBayes function in the e1071 package.
+```{r}
+# build a naive Bayes model
+nb_model = naiveBayes(adopter ~ ., data = balanced_data_train)
+# make prediction
+pred_nb = predict(nb_model, data_validation)
+# get the performance
+conf_matrix = confusionMatrix(data = pred_nb,
+                              reference = data_validation$adopter,
+                              mode = "prec_recall",
+                              positive = '1')
+# evaluate performance
+precision_nb <- conf_matrix$byClass["Pos Pred Value"]
+f1_nb <- conf_matrix$byClass["F1"]
+performance_nb <- setNames(0.7*precision_nb+0.3*f1_nb,'performance_nb')
+print(c(performance_nb, precision_nb, f1_nb))
+```
+
+## 3.6 Performance Comparision
+...
+
+# 4. Summary for Analysis Results
+...
+
+
+Further Work We Can Do: 
+
+1. more explaination about `ovun.sample()` function. How does it work? Does it generate using copy paste or artifically creating or others?
+2. more EDA + more visualization (group_by adopter);
+3. ROC,AUC for 3 models -> validate the choice of model based on our performance metric; 
+4. clustering + feature selections -> modify K-NN and Naive Bayes;
+5. weighted distance -> modify K-NN;
+6. tree Pruning -> modify Decision Tree;
+7. cross validation for 3 models -> validate the robustness of our choosed model;
+8. prediction performance visualization

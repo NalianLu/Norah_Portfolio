@@ -1,0 +1,106 @@
+---
+title: "Homework 2 Technical Document"
+author: "Group 6"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(caret)
+data <- read_csv("XYZData.csv")
+```
+
+# Table of contents:
+1. Problem Scoping
+2. Exploratory Data Analysis
+3. Predictive Analysis
+4. Summary for Analysis Results
+
+# 1. Problem Scoping
+## 1.1 Background Information
+Website XYZ, a music-listening social networking website, follows the "freemium" business model. The website offers basic services for free, and provides a number of additional premium capabilities for a monthly subscription fee.
+
+## 1.2 Problem Statement
+Know which users would be likely to convert from free users to premium subscribers in the next 6 month period, if they are targeted by the promotional campaign.
+
+## 1.2 Objective
+Build the best predictive model to predict likely adopters for the next marketing campaign
+
+## 1.3 Data Requirement
+The user features and results of previous marketing campaigns which targeted a number of non-subscribers
+
+## 1.4 Deliverables
+1. A proper performance metric for model evaluation based on the description of the business
+2. Sampling techniques to process imbalanced class distribution data
+3. The best model that achieves highest performance on the metric of selection after comparing different modeling techniques, different parameter configurations, and feature selection strategies.
+
+# 2. Exploratory Data Analysis
+## 2.1 Get a summary of dataset
+```{r}
+summary(data |> select(-user_id))
+```
+Most of features are positively skewed except for male, avg_friend_male, delta_avg_friend_male, delta_subscriber_friend_cnt, and tenure.
+
+## 2.2 Missing value check
+```{r}
+sum(is.na(data))
+```
+There is no row with missing values in the dataset.
+
+## 2.3 Visualize the adopter
+```{r}
+# pie chart for adopter to see the proportion
+ggplot(data, aes(x = factor(adopter), fill = factor(adopter))) +
+  geom_bar()
+```
+```{r}
+num_class1 <- data |> filter(adopter==1) |> count()
+as.numeric(100*num_class1/count(data))  # in percentage
+```
+The class distribution is highly imbalanced with only 3.7% are adopters (class 1).
+
+## 2.4 Explore relationships between variables
+```{r}
+# Create a correlation matrix
+cor_matrix <- round(cor(data[,2:27]),2)
+# Find the top 5 correlated column pairs
+top_cor <- findCorrelation(cor_matrix, cutoff = 0.5, names = TRUE)
+# Print the top correlated column pairs
+print(top_cor)
+```
+These features have strong correlation (correlation coefficient >= 0.5):
+
+1. age-related
+  + cor(age, avg_friend_age) = 0.69
+2. friend-related
+  + cor(friend_cnt, friend_country_cnt) = 0.69
+  + cor(friend_cnt, subscriber_friend_cnt) = 0.65
+  + cor(delta_friend_cnt, delta_friend_country_cnt) = 0.65
+  + cor(friend_country_cnt, subscriber_friend_cnt) = 0.57
+3. track-related
+  + cor(lovedTracks, delta_lovedTracks) = 0.51
+
+# 3. Predictive Analysis
+## 3.1 Performance metric
+```{r}
+
+```
+## 3.2 Oversampling on training data
+```{r}
+
+```
+## 3.3 Model1
+```{r}
+
+```
+## 3.4 Model2
+```{r}
+
+```
+## 3.5 Performance Comparision
+
+# 4. Summary for Analysis Results
