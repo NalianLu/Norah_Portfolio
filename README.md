@@ -24,7 +24,7 @@ This repository tracks my self-guided projects, showcasing my work in data analy
 * Present two hypotheses to account for the variation in success rates observed over different years and employ visual representations to illustrate the initial findings
 * Construct an interactive dashboard utilizing the Hvplot and Panel packages, enabling the comprehensive exploration of projects across various regions and years
 
-## 6. Movie Recommendation System
+## Project 6: Movie Recommendation System
 * Built four different recommendation engines: Simple Recommender, Content-Based Recommender, Collaborative Filtering, and Hybrid Recommender
 * Compared the effectiveness of each recommendation system
 * Combined content-based and collaborative filtering techniques for personalized movie recommendations
